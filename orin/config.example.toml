@@ -7,9 +7,11 @@
 mode = "direct"
 
 # ---- transcription (LOCAL, on the Orin GPU) --------------------------------
-stt_backend = "faster_whisper"   # faster_whisper (CUDA) | whisper_cli | echo
+stt_backend = "faster_whisper"   # faster_whisper | whisper_cli | echo
 fw_model_size = "small"          # small|medium ; benchmark BOTH int8 on-device (D3)
-fw_device = "cuda"
+fw_device = "cpu"                # cpu int8 small runs ~16s / 60s audio (under realtime) on Orin.
+                                 # "cuda" needs a JetPack-native CTranslate2 build; the stock
+                                 # pip wheel is CPU-only and raises "not compiled with CUDA support".
 fw_compute_type = "int8"
 fw_beam_size = 1
 fw_vad_filter = true

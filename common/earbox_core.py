@@ -162,9 +162,13 @@ def transcribe_whisper_cli(cfg, wav_path):
 def ensure_repo(cfg):
     repo = Path(cfg["memory_repo"])
     repo.mkdir(parents=True, exist_ok=True)
-    if not (repo / ".git").exists():
+    fresh = not (repo / ".git").exists()
+    if fresh:
         subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
-        _git_identity(repo)
+    # Set identity unconditionally: heals a repo that was `git init`ed without
+    # one (else every transcript commit dies with "Author identity unknown").
+    _git_identity(repo)
+    if fresh:
         gi = repo / ".gitignore"
         gi.write_text("*.wav\n*.aiff\n*.raw\n*.pcm\n*.opus\n")  # never commit audio
         (repo / "README.md").write_text(
