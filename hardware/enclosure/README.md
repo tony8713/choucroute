@@ -12,7 +12,54 @@ Two-chamber tower housing the **NVIDIA Jetson Orin Nano Super Developer Kit**
 
 ---
 
-## v2 — "le monolithe" (current, printable)
+## v3 — "le monolithe vertical" (CURRENT, printable)
+
+Laurent rejected v2 (vents rendered as hearts/stars; didn't read vertical).
+v3 follows his literal spec. Files: `earbox_v3.py`, `earbox_v3.step`,
+`earbox_v3.stl`, `preview_v3.png`.
+
+- **Rectangular box, height largest** — 114.5 × 114.5 × **211 mm** (incl. 5 mm
+  feet); height is the largest dimension. Orin flat at the bottom, tall plenum,
+  reSpeaker crown on top.
+- **Shell 3 mm.**
+- **Diagonally truncated summit** — two same-side offset 45°-ish planar cuts
+  (*deux outils légèrement décalés*) → a stepped/faceted diagonal top.
+- **Ventilation = rounded-triangle QUINCONCE** (staggered rows, half-pitch
+  offset, alternating up/down, webbed so triangles never touch): a **5×5 grid
+  facing the Orin fan** (−X wall, low) + an **underside mesh** (floor intake).
+  No other wall perforation. **Built as explicit 3-point polygons with corner
+  fillets — not `RegularPolygon`/glyphs** (that + filleting overlapping
+  triangles was the v2 hearts/stars bug).
+- **4 triangular feet, 5 mm** high, under the corners.
+- **"earbox" debossed 2 mm**, monospace (Menlo).
+
+**Kept:** two-part easy-open split; case **107 × 17 VERIFIED**; **0.75 mm** on
+all fits; foam-decoupled seat; Orin **30 mm** conservative; **16 mm** mute hole;
+support-light orientation.
+
+**The split / openability:** `mono_base` (tall vented body, holds Orin) +
+`mono_crown` (truncated cup, holds cased reSpeaker). Four **corner posts** fused
+into the base corners locate matching **blind holes** in the crown — 0.75 mm
+slip fit. Crown lifts straight off / pries with a fingernail; **nothing captive,
+no screws.** Both parts are single watertight solids. Lift crown → base open on
+top → drop the Orin in.
+
+**Print orientation (support-light):** `mono_base` upright, open-top up (feet
+on the plate, triangle holes + I/O bridge as wall openings); `mono_crown` cup-up
+(deck on the plate; cup opens up; the diagonal summit facets step inward =
+self-supporting; post holes are shallow bottom pockets).
+
+**Verification:** vents, summit, feet, and text were all confirmed by rendering
+the **exported STL** (orthographic outer-skin projections), not the sketch —
+the triangles are clean rounded triangles en quinconce, no hearts/stars.
+
+**Same fundamental conflict, resolved:** the round 107 mm case forces a
+~114.5 mm footprint in both axes, so "narrow" is read as **proportion** — a
+114.5 × 211 tall monolith (ratio 1.84), not a wider box.
+
+---
+
+## v2 — "le monolithe" (superseded by v3)
 
 Laurent rejected v1 as *"batiment antique"* (too temple-like). v2 adopts his
 design language. Files: `earbox_v2.py`, `earbox_v2.step`, `earbox_v2.stl`,
