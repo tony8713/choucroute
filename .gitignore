@@ -16,3 +16,10 @@ scratch/
 # python
 __pycache__/
 *.pyc
+
+# hardware CAD toolchain clone + venv (not source)
+tools/
+
+# generated CAD scratch
+*.step.glb
+.*.step.glb
