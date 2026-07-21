@@ -81,5 +81,10 @@ invariant table in `docs/architecture.md` §5.
 
 ## Status
 
-Local-first, nothing pushed. **A private git remote is still needed for the
-team** before fleet/golden-image work (D6).
+Early, local-first, and moving fast. The capture → local-transcribe → git-memory
+pipeline is validated end-to-end; the enclosure, fleet, and golden-image work
+(D6) are in progress.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
