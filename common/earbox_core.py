@@ -24,7 +24,10 @@ import os
 import re
 import subprocess
 import sys
-import tomllib
+try:
+    import tomllib
+except ModuleNotFoundError:
+    import tomli as tomllib
 import wave
 from pathlib import Path
 

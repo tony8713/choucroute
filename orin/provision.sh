@@ -42,7 +42,7 @@ echo "[earbox] python venv + faster-whisper (CUDA)"
 # ON D3.
 python3 -m venv "$PREFIX/venv"
 "$PREFIX/venv/bin/pip" install --upgrade pip
-"$PREFIX/venv/bin/pip" install faster-whisper zeroconf || {
+"$PREFIX/venv/bin/pip" install faster-whisper zeroconf 'tomli; python_version < "3.11"' || {
   echo "[earbox] WARN: faster-whisper install needs attention on-device (CTranslate2 CUDA)."
 }
 
