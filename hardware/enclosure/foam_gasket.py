@@ -9,7 +9,7 @@ Outputs a 2D DXF (laser cut layout). Dimensions are pulled from earbox_v1 so
 the gasket and the cup always agree — change dims there, regenerate both.
 """
 
-from build123d import BuildSketch, Circle, Mode, export_dxf
+from build123d import BuildSketch, Circle, ExportDXF, Mode
 
 import earbox_v1 as E
 
@@ -27,9 +27,15 @@ def gen_dxf():
     return ring.sketch
 
 
+def write_dxf(sk, path="foam_gasket.dxf"):
+    exporter = ExportDXF()
+    exporter.add_shape(sk)
+    exporter.write(path)
+
+
 if __name__ == "__main__":
     sk = gen_dxf()
-    export_dxf(sk, "foam_gasket.dxf")
+    write_dxf(sk)
     print(
         f"wrote foam_gasket.dxf  OD={GASKET_OUTER_DIA:.1f} "
         f"ID={GASKET_INNER_DIA:.1f} thick={GASKET_THICKNESS:.1f} mm"
