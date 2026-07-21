@@ -10,6 +10,69 @@ Two-chamber tower housing the **NVIDIA Jetson Orin Nano Super Developer Kit**
 > later. Every model dimension is a named variable at the top of
 > `earbox_v1.py`; the acoustically-critical ones are one-line adjustable.
 
+---
+
+## v2 — "le monolithe" (current, printable)
+
+Laurent rejected v1 as *"batiment antique"* (too temple-like). v2 adopts his
+design language. Files: `earbox_v2.py`, `earbox_v2.step`, `earbox_v2.stl`,
+`preview_v2.png`.
+
+**Design language (Laurent):**
+- **Vertical monolith** — 128.5 × 128.5 × 184 mm, height:width ≈ **1.43** (v1
+  was 0.56, a squat tower). Tall exhaust-plenum body over the Orin chamber.
+- **Sommet tronqué sur deux arêtes** — the two top edges (‖ X) are truncated
+  with 45° planar cuts (8 mm), a chiselled crown; the round mic opening sits in
+  the middle of it.
+- **Triangle-mesh ventilation** — tessellated up/down rounded triangles (11 mm
+  side, 1.3 mm corner radius, 4 mm webs) instead of slots: floor intake + a high
+  panel on all four walls (exhaust + the signature texture).
+
+**Verified dims used:** reSpeaker case **107 mm × 17 mm** (caliper). Orin stack
+height stays the conservative **30 mm** (still unverified).
+
+**FDM fits (Laurent's 2am rule): 0.75 mm on ALL fits** — cup seat (Ø108.5 ID
+around the 107 case, foam-lined), Orin chamber (generous), and the two-part
+joint. Loose is shimmable with foam; tight is a trash print.
+
+**Openability — the split (hard requirement):**
+- **Two parts:** `mono_base` (tall vented body, holds the Orin) and
+  `mono_crown` (truncated cup block, holds the cased reSpeaker).
+- **Joint:** the base has an upstanding **locating spigot** (fused to the wall);
+  the crown has a matching **groove** in its underside. The crown drops on and
+  **lifts straight off** — 0.75 mm slip fit, pry with a fingernail, **nothing
+  captive, no screws.** Both are single watertight solids.
+- **Access:** lift the crown → the base is open on top → drop the Orin in (or
+  out). The reSpeaker drops into the crown cup from the top. Fully serviceable.
+
+**Print orientation (support-light):**
+- `mono_base`: **upright, open-top up.** Vertical walls; the triangle holes and
+  I/O windows bridge as wall openings; floor solid on the plate. No supports.
+- `mono_crown`: **cup-up, deck on the plate.** Cup cavity opens upward (no
+  support); the two 45° truncation facets step *inward* going up (self-
+  supporting); the joint groove is a shallow bottom pocket (a few-mm bridge).
+
+**Design-language conflicts and how they were resolved:**
+1. *Deep two-edge truncation vs. a near-full-width mic cup.* The 107 mm case
+   leaves almost no wall at the footprint edges, so a large bevel would breach
+   the cup. **Resolved** by adding a 7 mm solid **joint frame** around the cup
+   (footprint grows to 128.5), giving real material for both the bevel and the
+   pry joint — at the cost of some slimness, recovered via **height** (1.43
+   ratio). The 8 mm bevel now lives in the frame.
+2. *"Slender footprint" vs. the round 107 mm cup.* A truly slim footprint is
+   impossible while the cased mic sits on top. **Resolved** by reading "vertical"
+   as **proportion, not plan area**: constant clean cross-section, tall body,
+   truncated crown — a monolith, not a mushroom (no overhang, which would re-read
+   as temple/pedestal).
+3. *OCC chamfer failed at the rounded corners; pending-face extrude dropped the
+   triangle sketch.* Engineering, not design: truncation done with **planar
+   splits**, triangle panels extruded from an **explicit sketch**. Spigot made to
+   **overlap** the wall so the base stays one fused solid.
+
+Open items for Laurent are unchanged below (foam thickness/material, Orin stack
+height, PSU — external **60 W barrel brick confirmed**, base↔crown retention if
+the pry fit is too loose/tight after measuring).
+
 ## Files
 
 | File | What |
@@ -93,8 +156,8 @@ official STEP) before printing.** VERIFIED = official datasheet/spec.
 | --- | --- | --- | --- |
 | PCB shape | circular | **VERIFIED** | Seeed wiki / product page |
 | Bare PCB diameter | ~99 mm (× 4 mm thick) | **UNVERIFIED** | cnx-software (third-party) — note: brief said ~70 mm, actual is ~99 mm |
-| Stock case outer diameter | **102 mm used** | **UNVERIFIED** | no official case dim exists; measure Seeed p-6490 STEP or caliper |
-| Stock case height | **20 mm used** | **UNVERIFIED** | measure Seeed p-6490 STEP or caliper |
+| Stock case outer diameter | **107 mm** | **VERIFIED** | Laurent caliper 2026-07-22 |
+| Stock case height | **17 mm** | **VERIFIED** | Laurent caliper 2026-07-22 |
 | Case shape | round | **VERIFIED** (shape only) | Seeed p-6490 page |
 | Mic array geometry | 4 mics on a 66 mm square (diag ~93.3 mm, radius ~46.7 mm) | **VERIFIED** | Seeed wiki mic coordinates |
 | USB | USB-C (UAC 2.0); 2nd USB-C for firmware | **VERIFIED** | Seeed wiki |
