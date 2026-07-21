@@ -59,9 +59,9 @@ ORIN_TOP_CLEAR = 8.0      # air gap above the fan to the deck for exhaust (mm)
 # retail puck (SKU p-6490) is therefore ~100 mm+; no official case dims exist.
 # ---------------------------------------------------------------------------
 RESPEAKER_PCB_DIA = 99.0     # [UNVERIFIED] bare PCB diameter (mm) — third-party (cnx)
-RESPEAKER_CASE_DIA = 102.0   # [UNVERIFIED] stock case outer diameter (mm) — measure the p-6490 STEP
-RESPEAKER_CASE_H = 20.0      # [UNVERIFIED] stock case height (mm) — measure the p-6490 STEP
-RESPEAKER_RADIAL_CLEAR = 1.0 # radial clearance cup wall -> case (loose, decoupled)
+RESPEAKER_CASE_DIA = 107.0   # [VERIFIED] stock case outer diameter (mm) — Laurent caliper 2026-07-22
+RESPEAKER_CASE_H = 17.0      # [VERIFIED] stock case height (mm) — Laurent caliper 2026-07-22
+RESPEAKER_RADIAL_CLEAR = 0.75 # radial clearance cup wall -> case (Laurent 0.75mm FDM fit rule, foam-lined)
 
 # ---------------------------------------------------------------------------
 # Acoustic decoupling — laser-cut foam gasket (Laurent supplies foam)
