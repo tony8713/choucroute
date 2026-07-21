@@ -24,9 +24,14 @@ whisper_threads = 6
 # The XVF3800 enumerates as a USB audio device. Feed whisper the DSP-PROCESSED
 # ASR channel (post beamforming/NS/AEC/AGC), NOT the raw mic channels.
 # VERIFY device + channel layout on-device: `arecord -l` / `arecord -L`.
-usb_capture_device = "default"   # e.g. "plughw:CARD=XVF3800,DEV=0"
-usb_channels = 1                 # total channels the device presents (1|2|6...)
-usb_asr_channel = 0              # index of the processed ASR channel
+# Use a DIRECT ALSA hw device, NOT "default": under systemd there is no user
+# session, so "default" routes through PulseAudio which has no runtime dir and
+# fails ("Failed to symlink .../pulse/...runtime, Read-only file system"),
+# capturing nothing. hw:0,0 = the reSpeaker XVF3800 (card 0 on the founder Orin;
+# confirm your card index with `arecord -l`).
+usb_capture_device = "hw:0,0"    # DIRECT ALSA; NOT "default" (pulse). Verify card idx via `arecord -l`.
+usb_channels = 2                 # XVF3800 presents 2ch @ S16_LE/16k; capture both, down-select ASR ch below
+usb_asr_channel = 0              # index of the processed ASR channel to feed whisper
 
 # ---- denoise (OPTIONAL pre-processing; DEFAULT OFF) ------------------------
 # The XVF3800 already does noise suppression + AEC + AGC on-chip, so software
