@@ -1,0 +1,26 @@
+[Unit]
+Description=earbox Orin brain (capture/receive -> whisper -> git memory)
+After=sound.target local-fs.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=earbox
+Group=earbox
+ExecStart=/usr/bin/python3 /opt/earbox/orin/orind.py --config /home/earbox/.config/earbox/orin.toml
+Restart=always
+RestartSec=3
+
+# Hardening. NOTE: unlike the D1 single-box daemon we do NOT set
+# PrivateNetwork=yes here, because in "lan" mode the Orin must accept the
+# satellite TLS socket, and (separately) summarize.py needs egress. In "direct"
+# mode the Orin never opens a socket at all. Privacy still holds: raw audio only
+# ever lives in tmpfs and is deleted in a finally; only text is committed.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/earbox/earbox-memory /dev/shm/earbox
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

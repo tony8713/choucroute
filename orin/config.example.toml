@@ -1,0 +1,65 @@
+# earbox ORIN (brain) config. Copy to ~/.config/earbox/orin.toml on the Orin.
+# Jetson Orin Nano Super, JetPack 6.x.
+
+# Input mode:
+#   direct = capture the local reSpeaker XVF3800 USB mic (FOUNDER UNIT, no LAN)
+#   lan    = TLS server; Pi satellites stream rooms in (OPTIONAL multi-room)
+mode = "direct"
+
+# ---- transcription (LOCAL, on the Orin GPU) --------------------------------
+stt_backend = "faster_whisper"   # faster_whisper (CUDA) | whisper_cli | echo
+fw_model_size = "small"          # small|medium ; benchmark BOTH int8 on-device (D3)
+fw_device = "cuda"
+fw_compute_type = "int8"
+fw_beam_size = 1
+fw_vad_filter = true
+language = "fr"                  # "auto" to detect (slower)
+
+# whisper_cli fallback (only used if stt_backend = "whisper_cli"):
+whisper_bin = "whisper-cli"
+model_path = "/opt/earbox/models/ggml-base.bin"
+whisper_threads = 6
+
+# ---- direct mode: reSpeaker XVF3800 USB capture ----------------------------
+# The XVF3800 enumerates as a USB audio device. Feed whisper the DSP-PROCESSED
+# ASR channel (post beamforming/NS/AEC/AGC), NOT the raw mic channels.
+# VERIFY device + channel layout on-device: `arecord -l` / `arecord -L`.
+usb_capture_device = "default"   # e.g. "plughw:CARD=XVF3800,DEV=0"
+usb_channels = 1                 # total channels the device presents (1|2|6...)
+usb_asr_channel = 0              # index of the processed ASR channel
+
+# ---- denoise (OPTIONAL pre-processing; DEFAULT OFF) ------------------------
+# The XVF3800 already does noise suppression + AEC + AGC on-chip, so software
+# denoise is off by default. Enable + set denoise_cmd only for raw-mic paths or
+# once Laurent's chain lands (name PENDING). denoise_cmd: wav on stdin -> wav on
+# stdout.
+denoise_enabled = false
+# denoise_cmd = "laurent-denoise --rate 16000"
+
+# ---- memory (git-backed, text only) ----------------------------------------
+memory_repo = "/home/earbox/earbox-memory"
+auto_commit = true
+
+# Scratch: MUST be tmpfs so raw audio never touches persistent storage.
+scratch_dir = "/dev/shm/earbox"
+
+# ---- VAD (energy gate) -----------------------------------------------------
+segment_seconds = 30
+sample_rate = 16000
+vad_rms_threshold = 0.012
+vad_min_voiced_ratio = 0.06
+
+# ---- mute ------------------------------------------------------------------
+mute_flag = "/home/earbox/.earbox-muted"
+gpio_mute_pin = 0
+
+# ---- lan mode: satellite TLS server ----------------------------------------
+listen_host = "0.0.0.0"
+listen_port = 7217
+tls_certfile = "/opt/earbox/tls/orin.crt"
+tls_keyfile = "/opt/earbox/tls/orin.key"
+mdns_advertise = true
+mdns_instance = "earbox-orin"
+
+# Safety: never enable in production. Keeps raw audio on disk for debugging.
+keep_debug_audio = false

@@ -1,0 +1,16 @@
+[Unit]
+Description=earbox daily summary (text-only egress to owner's agent)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=earbox
+Group=earbox
+Environment=EARBOX_MEMORY=/home/earbox/earbox-memory
+# Owner configures these to point at their agent + Metro channel:
+# EnvironmentFile=/home/earbox/.config/earbox/summary.env
+ExecStart=/usr/bin/python3 /opt/earbox/daemon/summarize.py
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/home/earbox/earbox-memory
