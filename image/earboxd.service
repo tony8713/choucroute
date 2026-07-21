@@ -1,0 +1,22 @@
+[Unit]
+Description=earbox capture -> transcribe -> memory daemon
+After=sound.target local-fs.target
+
+[Service]
+Type=simple
+User=earbox
+Group=earbox
+ExecStart=/usr/bin/python3 /opt/earbox/daemon/earboxd.py --config /home/earbox/.config/earbox/config.toml --source arecord
+Restart=always
+RestartSec=3
+
+# Hardening: no network for the capture daemon. Egress is summarize.py only.
+PrivateNetwork=yes
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/earbox/earbox-memory /dev/shm/earbox
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

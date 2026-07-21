@@ -1,0 +1,17 @@
+# NEVER commit audio. This is a privacy invariant, not a preference.
+*.wav
+*.aiff
+*.aif
+*.raw
+*.pcm
+*.flac
+*.mp3
+*.m4a
+*.ogg
+
+# dev scratch (test audio, throwaway harness memory)
+scratch/
+
+# python
+__pycache__/
+*.pyc

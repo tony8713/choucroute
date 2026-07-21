@@ -1,0 +1,31 @@
+# earbox daemon config. Copy to ~/.config/earbox/config.toml on the device.
+
+# Capture
+segment_seconds = 30
+sample_rate = 16000
+alsa_device = "default"      # Pi: the WhisPlay HAT mic (see `arecord -l`)
+av_device = ":0"             # macOS dev: avfoundation audio index
+
+# Transcription (LOCAL whisper.cpp)
+whisper_bin = "whisper-cli"
+model_path = "/opt/earbox/models/ggml-base.bin"
+language = "fr"              # set "auto" to let whisper detect (slower)
+whisper_threads = 4          # Pi 5 has 4 cores
+
+# Memory (git-backed, text only)
+memory_repo = "/home/earbox/earbox-memory"
+auto_commit = true
+
+# Scratch: MUST be tmpfs so raw audio never touches persistent storage.
+scratch_dir = "/dev/shm/earbox"
+
+# VAD (energy gate; skips silent chunks to save CPU)
+vad_rms_threshold = 0.012
+vad_min_voiced_ratio = 0.06
+
+# Mute
+mute_flag = "/home/earbox/.earbox-muted"
+gpio_mute_pin = 0            # BCM pin of the physical mute switch; 0 = disabled
+
+# Safety: never enable in production. Keeps raw audio on disk for debugging.
+keep_debug_audio = false
