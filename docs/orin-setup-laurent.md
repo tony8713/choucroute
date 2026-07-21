@@ -9,17 +9,20 @@ Temps réel à prévoir: environ 2 à 3 heures. Si tout se passe bien, 1 h 15. L
 plus grosse partie, c'est le téléchargement et la copie de l'image sur la carte
 microSD (fichier de ~9 Go).
 
-Choix technique important (pour aller au plus simple et fiable):
-- Le système Ubuntu tourne depuis la carte microSD.
-- Le gros SSD NVMe sert uniquement de disque de données, monté sur /data
-  (modèles, transcriptions).
-- C'est un peu moins rapide que de tout mettre sur le NVMe, mais pour cette phase
-  (D3) c'est parfait et ça évite une manipulation compliquée.
+Choix technique important (pour cette phase, au plus simple et fiable):
+- Le système Ubuntu ET les données (modèles, transcriptions) tournent depuis la
+  carte microSD de 128 Go. Il reste ~95 Go de libre, largement assez pour ce
+  sprint.
+- Il n'y a PAS de SSD NVMe monté sur /data pour cette phase: le NVMe a été retiré
+  et mis de côté (restauration garantie plus tard, sans perte de données). On
+  pourra rebrancher un NVMe et déplacer les données dessus quand on voudra —
+  c'est optionnel.
 
 Matériel nécessaire:
 - L'Orin Nano Super et son alimentation.
-- La carte microSD (64 Go minimum, 128 Go conseillé).
-- Le SSD NVMe.
+- La carte microSD (128 Go).
+- (Le SSD NVMe n'est PAS nécessaire pour cette phase — il a été retiré et mis de
+  côté; on le restaurera plus tard, sans perte.)
 - Un écran + un câble DisplayPort. ATTENTION: l'Orin n'a PAS de prise HDMI, il a
   une prise DisplayPort. Si ton écran n'a que du HDMI, il te faut un câble
   "DisplayPort vers HDMI" (quelques euros).
@@ -31,7 +34,13 @@ Matériel nécessaire:
 
 ## Étape 1 — Monter le SSD, préparer la carte microSD, et démarrer
 
-### 1a. Installer le SSD NVMe
+### 1a. Installer le SSD NVMe — À SAUTER pour ce sprint
+
+Pour cette phase on tourne UNIQUEMENT sur la carte microSD. Le SSD NVMe a été
+retiré et mis de côté (restauration garantie plus tard, sans perte). Tu peux donc
+SAUTER les points 1 à 4 ci-dessous et passer directement à la partie 1b.
+
+Les points 1 à 4 ne servent QUE si tu réinstalles un jour le SSD (optionnel):
 
 1. Débranche complètement l'Orin (pas d'alimentation branchée).
 2. Retourne la carte de l'Orin: le slot pour le SSD est SOUS la carte. C'est le
@@ -39,9 +48,6 @@ Matériel nécessaire:
 3. Retire la petite vis qui est en face du slot (garde-la, tu en as besoin).
 4. Glisse le SSD dans le slot, en biais (environ 30°), jusqu'à ce qu'il soit bien
    enfoncé. Puis rabats-le à plat et revisse la petite vis pour le maintenir.
-
-Vérification: le SSD est bien à plat, la vis serrée, il ne bouge pas. On
-vérifiera qu'il est reconnu par le logiciel à l'étape 7.
 
 ### 1b. Copier le système sur la carte microSD (sur TON ordinateur)
 
@@ -297,80 +303,14 @@ j'en ai besoin pour la config audio.
 
 ---
 
-## Étape 7 — Formater et monter le SSD NVMe sur /data
+## Étape 7 — Stockage (rien à faire)
 
-ATTENTION: cette étape EFFACE TOUT ce qui se trouve sur le SSD. Le SSD est neuf
-donc c'est sans conséquence, mais vérifie bien à l'étape 27 que tu vises le bon
-disque (nvme...) et surtout PAS la carte microSD.
-
-27. Identifie le SSD:
-
-```
-lsblk
-```
-
-Vérification: tu dois voir une ligne "nvme0n1" avec la taille de ton SSD (par
-exemple 1T ou 2T). C'est bien lui. La carte microSD apparaît sous le nom
-"mmcblk0" — NE PAS y toucher.
-
-28. Crée une table de partitions neuve (efface le disque):
-
-```
-sudo parted /dev/nvme0n1 --script mklabel gpt
-```
-
-29. Crée une partition qui occupe tout le disque:
-
-```
-sudo parted /dev/nvme0n1 --script mkpart primary ext4 0% 100%
-```
-
-30. Formate la partition:
-
-```
-sudo mkfs.ext4 /dev/nvme0n1p1
-```
-
-31. Crée le dossier /data:
-
-```
-sudo mkdir -p /data
-```
-
-32. Récupère l'identifiant unique (UUID) de la partition:
-
-```
-sudo blkid /dev/nvme0n1p1
-```
-
-Ça affiche une ligne avec UUID="xxxxxxxx-xxxx-...". Note ce code entre
-guillemets.
-
-33. Fais en sorte que /data se remonte automatiquement à chaque démarrage.
-    Remplace TON_UUID par le code noté juste avant:
-
-```
-echo 'UUID=TON_UUID /data ext4 defaults,nofail 0 2' | sudo tee -a /etc/fstab
-```
-
-34. Monte le disque maintenant:
-
-```
-sudo mount -a
-```
-
-35. Donne les droits à l'utilisateur earbox:
-
-```
-sudo chown earbox:earbox /data
-```
-
-Vérification: la commande suivante doit montrer une ligne avec /data et la taille
-de ton SSD:
-
-```
-df -h /data
-```
+Pour ce sprint, l'Orin tourne UNIQUEMENT sur la carte microSD de 128 Go (~95 Go
+libres, largement assez pour le système, les modèles et les transcriptions). Il
+n'y a PAS de SSD NVMe à formater ni à monter sur /data: le NVMe a été retiré et
+mis de côté (restauration garantie plus tard, sans perte de données). Un NVMe
+reste optionnel et pourra être ajouté ensuite. Tu peux passer directement à la
+suite.
 
 ---
 

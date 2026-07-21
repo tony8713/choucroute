@@ -15,6 +15,15 @@ PREFIX=/opt/earbox
 REPO_SRC="$(cd "$(dirname "$0")/.." && pwd)"
 MODE=${EARBOX_MODE:-direct}          # direct (XVF3800) | lan (satellite server)
 
+# Persistent storage root. SPRINT: the Orin runs from the 128GB microSD ONLY;
+# there is NO NVMe /data mount. Default the data root to the service user's home
+# on the SD and use /data ONLY if a real filesystem is mounted there. Override
+# with EARBOX_DATA=/path. Code paths (models, git memory) resolve from this.
+STORAGE_ROOT="${EARBOX_DATA:-$(mountpoint -q /data 2>/dev/null && echo /data || echo "$EARBOX_HOME")}"
+MEMORY_REPO="$STORAGE_ROOT/earbox-memory"
+MODELS_DIR="$STORAGE_ROOT/earbox-models"
+echo "[earbox] storage root: $STORAGE_ROOT (memory=$MEMORY_REPO models=$MODELS_DIR)"
+
 echo "[earbox] apt deps"
 apt-get update
 apt-get install -y --no-install-recommends \
@@ -45,16 +54,19 @@ install -Dm755 "$REPO_SRC"/daemon/summarize.py "$PREFIX/daemon/summarize.py"
 install -Dm755 "$REPO_SRC"/daemon/query.py     "$PREFIX/daemon/query.py"
 
 echo "[earbox] optional whisper.cpp fallback model (whisper_cli backend)"
-mkdir -p "$PREFIX/models"
-if [ "${EARBOX_FETCH_GGML:-0}" = "1" ] && [ ! -f "$PREFIX/models/ggml-base.bin" ]; then
-  curl -L -o "$PREFIX/models/ggml-base.bin" \
+install -d -o "$EARBOX_USER" -g "$EARBOX_USER" "$STORAGE_ROOT" "$MODELS_DIR"
+if [ "${EARBOX_FETCH_GGML:-0}" = "1" ] && [ ! -f "$MODELS_DIR/ggml-base.bin" ]; then
+  curl -L -o "$MODELS_DIR/ggml-base.bin" \
     "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin"
+  chown "$EARBOX_USER:$EARBOX_USER" "$MODELS_DIR/ggml-base.bin"
 fi
 
 echo "[earbox] config"
 install -d -o "$EARBOX_USER" -g "$EARBOX_USER" "$EARBOX_HOME/.config/earbox"
 if [ ! -f "$EARBOX_HOME/.config/earbox/orin.toml" ]; then
-  sed "s/^mode = \"direct\"/mode = \"$MODE\"/" \
+  sed -e "s/^mode = \"direct\"/mode = \"$MODE\"/" \
+      -e "s#^memory_repo = .*#memory_repo = \"$MEMORY_REPO\"#" \
+      -e "s#^model_path = .*#model_path = \"$MODELS_DIR/ggml-base.bin\"#" \
       "$REPO_SRC/orin/config.example.toml" \
       > "$EARBOX_HOME/.config/earbox/orin.toml"
   chown "$EARBOX_USER:$EARBOX_USER" "$EARBOX_HOME/.config/earbox/orin.toml"
@@ -73,13 +85,16 @@ if [ "$MODE" = "lan" ]; then
 fi
 
 echo "[earbox] init memory repo"
-sudo -u "$EARBOX_USER" git init -q "$EARBOX_HOME/earbox-memory" || true
+install -d -o "$EARBOX_USER" -g "$EARBOX_USER" "$MEMORY_REPO"
+sudo -u "$EARBOX_USER" git init -q "$MEMORY_REPO" || true
 
 echo "[earbox] systemd units"
 # Run orind from the venv python so faster-whisper is importable.
-sed "s#/usr/bin/python3#$PREFIX/venv/bin/python3#" \
+sed -e "s#/usr/bin/python3#$PREFIX/venv/bin/python3#" \
+    -e "s#/home/earbox/earbox-memory#$MEMORY_REPO#g" \
     "$REPO_SRC/orin/systemd/orind.service" > /etc/systemd/system/orind.service
-install -Dm644 "$REPO_SRC/orin/systemd/earbox-summary.service" /etc/systemd/system/earbox-summary.service
+sed "s#/home/earbox/earbox-memory#$MEMORY_REPO#g" \
+    "$REPO_SRC/orin/systemd/earbox-summary.service" > /etc/systemd/system/earbox-summary.service
 install -Dm644 "$REPO_SRC/orin/systemd/earbox-summary.timer"   /etc/systemd/system/earbox-summary.timer
 systemctl daemon-reload
 systemctl enable --now orind.service
@@ -90,5 +105,6 @@ systemctl --no-pager status orind.service || true
 echo
 echo "XVF3800 check:  arecord -l   (find the reSpeaker card, set usb_capture_device/usb_asr_channel)"
 echo "Bench (D3):     time the faster-whisper small vs medium int8 RTF in real kitchen noise"
+echo "Storage:        $STORAGE_ROOT (SD-only sprint; set EARBOX_DATA or mount /data to relocate)"
 echo "Mute:           touch $EARBOX_HOME/.earbox-muted"
 echo "Logs:           journalctl -u orind -f"

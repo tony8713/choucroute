@@ -181,6 +181,15 @@ CTranslate2 path on Hailo. STT stays on the **Orin GPU via faster-whisper CUDA**
 Hailo is only relevant if we later add on-device vision, which is out of scope.
 
 ## 7. Sizing / gotchas
+- **Storage (sprint): SD-only.** The founder Orin runs entirely from the 128GB
+  microSD (~95GB free — ample for the OS, the faster-whisper model cache, and the
+  text-only git memory). There is **no NVMe `/data` mount** for the sprint: the
+  rover NVMe was removed and shelved (restoration guaranteed later, no data loss).
+  An NVMe at `/data` is **optional**: `orin/provision.sh` resolves a `STORAGE_ROOT`
+  that defaults to the service user's home on the SD and uses `/data` only if it
+  is actually mounted (`EARBOX_DATA=<path>` overrides). Memory repo, models dir,
+  and the systemd `ReadWritePaths` are all derived from `STORAGE_ROOT`, so moving
+  to an NVMe later is a one-variable change, not a rewrite.
 - **Benchmark faster-whisper small vs medium int8 on the Orin (D3)** under
   thermal load and in kitchen noise; pin whichever holds real time.
 - CTranslate2 on JetPack must be a **CUDA aarch64** build; the stock PyPI wheel
