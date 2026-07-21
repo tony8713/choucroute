@@ -12,7 +12,33 @@ Two-chamber tower housing the **NVIDIA Jetson Orin Nano Super Developer Kit**
 
 ---
 
-## v3 — "le monolithe vertical" (CURRENT, printable)
+## v4 — "le cube" (CURRENT, printable)
+
+Laurent's v4 refinements over v3. Files: `earbox_v4.py`, `earbox_v4.step`,
+`earbox_v4.stl`, `preview_v4.png`.
+
+- **Perfect cube** — 114.5 × 114.5 × 114.5 mm (+5 mm feet). Side = smallest the
+  round 107 mm case allows while fitting Orin + plenum below the crown.
+- **Flat top** — the v3 diagonal summit is gone.
+- **Debossed "earbox" fixed** — was upside-down in v3 (`x_dir`/`z_dir` put local
+  Y at −Z). Now upright and readable when the cube sits on its feet.
+- **Triangles packed closer** — same rounded-triangle quincunx, tighter pitch:
+  5×5 facing the Orin fan + a denser underside mesh.
+- **No cable channel / clips / hole.** The reSpeaker case seats **rotated 45°**
+  so its USB points into the box interior toward the (+X,+Y) corner; the cable
+  just drops inside to the Orin. Only a **connector-clearance cutout** at that
+  corner (through the cup wall + down through the deck) and a **triangular rim
+  marker** on the top show how to orient the case.
+- Kept: two-part corner-post pry joint (single solids, nothing captive), case
+  **107 × 17 VERIFIED** + **0.75** fits, foam seat, **16 mm** mute hole, 4
+  triangular **5 mm feet**, **3 mm** shell, support-light print orientation.
+
+Verified by rendering the exported **STL** (not the sketch): cube, flat top,
+upright text, clean rounded-triangle quincunx vents, and the corner cutout.
+
+---
+
+## v3 — "le monolithe vertical" (superseded by v4)
 
 Laurent rejected v2 (vents rendered as hearts/stars; didn't read vertical).
 v3 follows his literal spec. Files: `earbox_v3.py`, `earbox_v3.step`,
