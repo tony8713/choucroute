@@ -1,0 +1,23 @@
+[Unit]
+Description=earbox Pi mic satellite (capture -> VAD -> encrypt -> stream to Orin)
+After=sound.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=earbox
+Group=earbox
+ExecStart=/usr/bin/python3 /opt/earbox/satellite/satellited.py --config /home/earbox/.config/earbox/satellite.toml
+Restart=always
+RestartSec=3
+
+# The satellite MUST reach the Orin over the LAN, so it keeps a network
+# namespace. It has no memory repo and no disk writes outside tmpfs.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/dev/shm/earbox
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

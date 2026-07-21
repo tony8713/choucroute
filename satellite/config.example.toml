@@ -1,0 +1,32 @@
+# earbox SATELLITE config. Copy to ~/.config/earbox/satellite.toml on the Pi 4.
+# OPTIONAL multi-room tier. The founder unit (Orin + XVF3800) does NOT use this.
+
+satellite_id = "kitchen"        # names the room in the transcript, e.g. _(kitchen)_
+
+# Orin brain to stream to. Leave orin_host empty to mDNS-discover the Orin
+# advertising _earbox._tcp (needs python zeroconf on the Pi).
+orin_host = ""                  # e.g. "192.168.1.50" or "earbox-orin.local"
+orin_port = 7217
+
+# Encrypted LAN hop. Pin the Orin's self-signed cert (copy orin.crt from the
+# Orin). PRODUCTION HARDENING TODO: WireGuard and/or mutual-TLS client certs.
+tls_cafile = "/opt/earbox/tls/orin.crt"
+
+codec = "opus"                  # opus (needs opus-tools) | pcm (zero-dep, bigger)
+
+# ---- capture (mic on the Pi) -----------------------------------------------
+alsa_device = "default"         # see `arecord -l`
+segment_seconds = 30
+sample_rate = 16000
+
+# Scratch: MUST be tmpfs. The Pi keeps ZERO storage; wavs are deleted right
+# after streaming.
+scratch_dir = "/dev/shm/earbox"
+
+# ---- VAD (gate before streaming so we don't ship silence) ------------------
+vad_rms_threshold = 0.012
+vad_min_voiced_ratio = 0.06
+
+# ---- mute ------------------------------------------------------------------
+mute_flag = "/home/earbox/.earbox-muted"
+gpio_mute_pin = 0
