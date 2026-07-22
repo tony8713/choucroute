@@ -1,0 +1,19 @@
+# Netlify config for the choucroute transcript-monitor UI (apps/ui).
+# The app is a client-side Vite + React SPA. `vite build` emits a fully static
+# bundle to apps/ui/dist — there is no server. With no VITE_TRANSCRIPTS_URL set,
+# the app ships the in-repo sample/mock data only (apps/ui/src/data/mock.ts) and
+# never fetches any private transcript source. Do NOT set VITE_TRANSCRIPTS_URL on
+# this public site.
+[build]
+  base = "."
+  command = "bun install && bun run build --filter=@choucroute/ui"
+  publish = "apps/ui/dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# SPA fallback so client-side navigation resolves to the app shell.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
