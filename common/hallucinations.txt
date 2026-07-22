@@ -1,0 +1,30 @@
+# earbox STT hallucination blacklist.
+# One phrase per line. Case/punctuation/accent-insensitive whole-segment match.
+# Lines starting with # are comments. Edit freely; no code changes needed.
+# Seeded from Whisper subtitle-ghost artifacts + Laurent's day-4 silence eval.
+
+# --- observed on the founder unit's quiet/sleeping-room silence ---
+c'est ça
+merci d'avoir regardé la vidéo
+s'il vous plaît
+sssshhh
+su-u-u
+
+# --- common French Whisper subtitle ghosts ---
+merci
+merci beaucoup
+abonnez-vous
+sous-titres réalisés par la communauté d'amara.org
+sous-titrage société radio-canada
+sous-titres réalisés par l'amara.org
+n'oubliez pas de vous abonner
+à la prochaine
+
+# --- common English Whisper subtitle ghosts ---
+thanks for watching
+thank you for watching
+please subscribe
+thank you
+you
+so
+bye

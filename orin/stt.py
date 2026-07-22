@@ -18,9 +18,22 @@ Select with config `stt_backend = "faster_whisper" | "whisper_cli" | "echo"`.
 Every backend is a callable (cfg, wav_path) -> cleaned text.
 """
 
+import inspect
+
 from common import earbox_core as core
 
 _FW_MODEL = None
+
+
+def _supported_kwargs(fn, kwargs, cfg):
+    try:
+        params = inspect.signature(fn).parameters
+    except (TypeError, ValueError):
+        return kwargs
+    if "hallucination_silence_threshold" in params:
+        kwargs["hallucination_silence_threshold"] = \
+            cfg.get("fw_hallucination_silence_threshold", 2.0)
+    return {k: v for k, v in kwargs.items() if k in params}
 
 
 def get_transcriber(cfg):
@@ -49,14 +62,26 @@ def _faster_whisper(cfg, wav_path):
             compute_type=cfg.get("fw_compute_type", "int8"),
         )
     lang = cfg.get("language", "fr")
-    segments, _info = _FW_MODEL.transcribe(
-        str(wav_path),
+    kwargs = dict(
         language=None if lang == "auto" else lang,
-        vad_filter=cfg.get("fw_vad_filter", True),
         beam_size=cfg.get("fw_beam_size", 1),
+        vad_filter=cfg.get("fw_vad_filter", True),
+        vad_parameters=dict(
+            threshold=cfg.get("fw_vad_threshold", 0.5),
+            min_silence_duration_ms=cfg.get("fw_vad_min_silence_ms", 500),
+            speech_pad_ms=cfg.get("fw_vad_speech_pad_ms", 200),
+        ),
+        condition_on_previous_text=cfg.get("fw_condition_on_previous_text", False),
+        temperature=cfg.get("fw_temperature", 0.0),
+        no_speech_threshold=cfg.get("fw_no_speech_threshold", 0.6),
+        log_prob_threshold=cfg.get("fw_log_prob_threshold", -1.0),
+        compression_ratio_threshold=cfg.get("fw_compression_ratio_threshold", 2.4),
     )
-    text = " ".join(s.text for s in segments)
-    return core.clean_transcript(text)
+    kwargs = _supported_kwargs(_FW_MODEL.transcribe, kwargs, cfg)
+    segments, _info = _FW_MODEL.transcribe(str(wav_path), **kwargs)
+    blacklist = core.load_blacklist(cfg)
+    kept = core.filter_segments(cfg, segments, blacklist=blacklist)
+    return core.clean_transcript(" ".join(kept), blacklist=blacklist)
 
 
 def _echo(cfg, wav_path):

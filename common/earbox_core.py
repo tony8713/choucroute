@@ -45,9 +45,24 @@ DEFAULTS = {
     "gpio_mute_pin": 0,                          # 0 = disabled; else BCM pin number
     "auto_commit": True,
     "keep_debug_audio": False,                   # MUST stay false in production
+    # ---- anti-hallucination filtering (STT rejects invented text on silence) --
+    "fw_condition_on_previous_text": False,      # stop the model feeding its own noise
+    "fw_temperature": 0.0,                       # deterministic; no sampling that invents
+    "fw_no_speech_threshold": 0.6,               # drop segments whose no_speech_prob exceeds this
+    "fw_min_avg_logprob": -1.0,                  # drop segments whose avg_logprob is below this
+    "fw_log_prob_threshold": -1.0,               # whisper-internal silence gate
+    "fw_compression_ratio_threshold": 2.4,       # whisper-internal degenerate-repeat gate
+    "fw_hallucination_silence_threshold": 2.0,   # passed only if the fw version supports it
+    "fw_vad_threshold": 0.5,                      # vad speech probability gate
+    "fw_vad_min_silence_ms": 500,                # silence run that splits speech
+    "fw_vad_speech_pad_ms": 200,                 # pad kept speech so words aren't clipped
+    "hallucination_blacklist_file": "",          # "" = packaged common/hallucinations.txt
+    "filter_min_chars": 2,                        # drop near-empty / punctuation-only segments
+    "filter_drop_repeated_token": True,          # drop a single short token repeated
 }
 
-# whisper on silence/noise hallucinates these; drop them.
+# whisper on silence/noise hallucinates these; drop them. This built-in set is
+# merged with the editable common/hallucinations.txt asset at load time.
 HALLUCINATIONS = {
     "", "[blank_audio]", "[ silence ]", "[silence]", "(silence)",
     "merci", "merci.", "sous-titres réalisés par la communauté d'amara.org",
@@ -125,7 +140,99 @@ def has_speech(cfg, wav_path):
 
 # ---- transcript cleaning ----------------------------------------------------
 
-def clean_transcript(text):
+def normalize_phrase(text):
+    s = (text or "").lower()
+    s = re.sub(r"[^\w\s]", " ", s, flags=re.UNICODE)
+    return re.sub(r"\s+", " ", s).strip()
+
+
+_BLACKLIST_CACHE = {}
+
+def load_blacklist(cfg):
+    path = cfg.get("hallucination_blacklist_file") or \
+        str(Path(__file__).with_name("hallucinations.txt"))
+    key = path
+    if key not in _BLACKLIST_CACHE:
+        phrases = {normalize_phrase(x) for x in HALLUCINATIONS}
+        p = Path(path)
+        if p.exists():
+            for ln in p.read_text(encoding="utf-8").splitlines():
+                ln = ln.strip()
+                if not ln or ln.startswith("#"):
+                    continue
+                phrases.add(normalize_phrase(ln))
+        _BLACKLIST_CACHE[key] = {x for x in phrases if x}
+    return _BLACKLIST_CACHE[key]
+
+
+def _is_repeated_token(norm):
+    words = norm.split()
+    return len(words) >= 2 and len(set(words)) == 1
+
+
+def _collapse_repeats(words):
+    out, i, n = [], 0, len(words)
+    while i < n:
+        hit = False
+        for k in range(1, 5):
+            if i + 2 * k > n:
+                continue
+            unit = words[i:i + k]
+            j = i + k
+            reps = 1
+            while j + k <= n and words[j:j + k] == unit:
+                reps += 1
+                j += k
+            if reps >= 3:
+                out.extend(unit)
+                i = j
+                hit = True
+                break
+        if not hit:
+            out.append(words[i])
+            i += 1
+    return out
+
+
+def is_hallucination(cfg, text, blacklist=None):
+    if blacklist is None:
+        blacklist = load_blacklist(cfg)
+    norm = normalize_phrase(text)
+    if len(norm) < int(cfg.get("filter_min_chars", 2)):
+        return True
+    if norm in blacklist:
+        return True
+    if cfg.get("filter_drop_repeated_token", True) and _is_repeated_token(norm):
+        return True
+    return False
+
+
+def filter_segments(cfg, segments, blacklist=None):
+    """Reject-on-silence gate over faster-whisper segment objects. Returns the
+    surviving segment texts. Drops high no_speech_prob, low avg_logprob,
+    blacklisted / near-empty / single-repeated-token segments."""
+    if blacklist is None:
+        blacklist = load_blacklist(cfg)
+    no_speech_max = float(cfg.get("fw_no_speech_threshold", 0.6))
+    min_logprob = float(cfg.get("fw_min_avg_logprob", -1.0))
+    kept = []
+    for s in segments:
+        text = (getattr(s, "text", "") or "").strip()
+        nsp = getattr(s, "no_speech_prob", None)
+        alp = getattr(s, "avg_logprob", None)
+        if nsp is not None and nsp > no_speech_max:
+            continue
+        if alp is not None and alp < min_logprob:
+            continue
+        if is_hallucination(cfg, text, blacklist):
+            continue
+        kept.append(text)
+    return kept
+
+
+def clean_transcript(text, cfg=None, blacklist=None):
+    if blacklist is None and cfg is not None:
+        blacklist = load_blacklist(cfg)
     lines = [ln.strip() for ln in text.splitlines()]
     out = []
     for ln in lines:
@@ -133,14 +240,18 @@ def clean_transcript(text):
         norm = re.sub(r"\s+", " ", norm)
         if norm in HALLUCINATIONS:
             continue
+        if blacklist is not None and normalize_phrase(ln) in blacklist:
+            continue
         # drop pure bracket/paren tags like [_BEG_], (wind blowing)
         if re.fullmatch(r"[\[\(].*[\]\)]", norm):
+            continue
+        if _is_repeated_token(normalize_phrase(ln)):
             continue
         if ln:
             out.append(ln)
     joined = " ".join(out).strip()
-    # collapse whisper's degenerate repetition loops
-    joined = re.sub(r"(\b\w+\b)( \1){3,}", r"\1", joined)
+    # collapse whisper's degenerate repetition loops (single word or short phrase)
+    joined = " ".join(_collapse_repeats(joined.split()))
     return joined
 
 
@@ -154,7 +265,7 @@ def transcribe_whisper_cli(cfg, wav_path):
          "-t", str(cfg.get("whisper_threads", 4)), "-nt", "-f", str(wav_path)],
         capture_output=True, text=True, check=True,
     )
-    return clean_transcript(proc.stdout)
+    return clean_transcript(proc.stdout, cfg=cfg)
 
 
 # ---- memory (git-backed) ----------------------------------------------------

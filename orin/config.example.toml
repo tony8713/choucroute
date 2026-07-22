@@ -17,6 +17,24 @@ fw_beam_size = 1
 fw_vad_filter = true
 language = "fr"                  # "auto" to detect (slower)
 
+# ---- anti-hallucination filtering (reject invented text on silence) --------
+# STT hallucinates subtitle-ghost phrases on quiet/near-silent audio; these
+# gates reject those segments so the 24/7 memory never invents. Tune freely
+# without code edits. Quality on clear speech is unaffected.
+fw_condition_on_previous_text = false  # kills "C'est ça" x7 self-feeding loops on noise
+fw_temperature = 0.0                   # deterministic decode; no sampling that invents
+fw_no_speech_threshold = 0.6           # DROP any segment with no_speech_prob above this
+fw_min_avg_logprob = -1.0              # DROP any segment with avg_logprob below this
+fw_log_prob_threshold = -1.0           # whisper-internal silence gate
+fw_compression_ratio_threshold = 2.4   # whisper-internal degenerate-repeat gate
+fw_hallucination_silence_threshold = 2.0  # applied only if the installed fw supports it
+fw_vad_threshold = 0.5                  # vad speech-probability gate
+fw_vad_min_silence_ms = 500            # silence run that splits speech (strongest lever)
+fw_vad_speech_pad_ms = 200             # pad kept speech so words aren't clipped
+# hallucination_blacklist_file = ""    # "" = packaged common/hallucinations.txt (editable)
+filter_min_chars = 2                    # drop near-empty / punctuation-only segments
+filter_drop_repeated_token = true      # drop a single short token repeated (Sssshhh Sssshhh)
+
 # whisper_cli fallback (only used if stt_backend = "whisper_cli"):
 whisper_bin = "whisper-cli"
 model_path = "/opt/earbox/models/ggml-base.bin"
