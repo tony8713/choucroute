@@ -1,0 +1,44 @@
+{
+  "name": "@choucroute/config",
+  "version": "0.1.0",
+  "description": "Shared ESLint, TypeScript and madge config presets for the choucroute monorepo (mirrors bonustrack/stage @stage-labs/config).",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tony8713/choucroute.git",
+    "directory": "packages/config"
+  },
+  "type": "module",
+  "private": true,
+  "files": [
+    "bin",
+    "eslint",
+    "madge",
+    "tsconfig",
+    "define.js",
+    "lint.js",
+    "README.md"
+  ],
+  "bin": {
+    "choucroute": "./bin/choucroute.js"
+  },
+  "exports": {
+    ".": "./define.js",
+    "./define": "./define.js",
+    "./lint": "./lint.js",
+    "./eslint/base": "./eslint/base.js",
+    "./madge": "./madge/index.js",
+    "./tsconfig/base.json": "./tsconfig/base.json"
+  },
+  "peerDependencies": {
+    "eslint": "*",
+    "madge": "*",
+    "typescript": "*",
+    "typescript-eslint": "*"
+  },
+  "peerDependenciesMeta": {
+    "madge": {
+      "optional": true
+    }
+  }
+}

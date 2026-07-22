@@ -17,6 +17,17 @@ scratch/
 __pycache__/
 *.pyc
 
+# js monorepo
+node_modules
+dist
+.turbo
+.vite
+*.tgz
+*.log
+.env
+.env.*
+!.env.example
+
 # hardware CAD toolchain clone + venv (not source)
 tools/
 
