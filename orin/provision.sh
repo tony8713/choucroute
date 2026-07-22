@@ -11,7 +11,10 @@ set -euo pipefail
 
 EARBOX_USER=earbox
 EARBOX_HOME=/home/$EARBOX_USER
-PREFIX=/opt/earbox
+PREFIX=/opt/earbox                   # compat symlink -> the earbox user's clone
+REPO_URL=${EARBOX_REPO_URL:-https://github.com/tony8713/choucroute.git}
+REPO_DEST="$EARBOX_HOME/earbox"      # the LIVE tree: earbox-owned, git-updatable, no root
+VENV="$REPO_DEST/venv"               # earbox-owned venv inside the clone (gitignored)
 REPO_SRC="$(cd "$(dirname "$0")/.." && pwd)"
 MODE=${EARBOX_MODE:-direct}          # direct (XVF3800) | lan (satellite server)
 
@@ -34,24 +37,36 @@ echo "[earbox] service user"
 id -u "$EARBOX_USER" >/dev/null 2>&1 || useradd -m -s /bin/bash "$EARBOX_USER"
 usermod -aG audio "$EARBOX_USER"
 
-echo "[earbox] python venv + faster-whisper (CUDA)"
+echo "[earbox] live code = the earbox user's own clone ($REPO_DEST)"
+# The daemon runs from this earbox-owned git clone, NOT a root-owned /opt copy.
+# Future code updates are then sudo-free: `git pull` here + kill the daemon PID
+# (the unit has Restart=always). No `sudo rsync`/`systemctl restart` needed.
+if [ ! -d "$REPO_DEST/.git" ]; then
+  if [ "$REPO_SRC" != "$REPO_DEST" ]; then
+    sudo -u "$EARBOX_USER" git clone "$REPO_URL" "$REPO_DEST"
+  fi
+fi
+chown -R "$EARBOX_USER:$EARBOX_USER" "$REPO_DEST"
+
+echo "[earbox] /opt/earbox -> $REPO_DEST (compat symlink; unit paths resolve here)"
+if [ -e "$PREFIX" ] && [ ! -L "$PREFIX" ]; then
+  mv "$PREFIX" "$PREFIX.bak-$(date +%s)"
+fi
+ln -sfn "$REPO_DEST" "$PREFIX"
+
+echo "[earbox] python venv + faster-whisper (earbox-owned, no root for pip)"
 # faster-whisper rides CTranslate2. On JetPack 6.x CTranslate2 must be a CUDA
 # build for the Jetson (aarch64 + CUDA 12). The plain PyPI wheel is often CPU or
 # desktop-CUDA only; if `device=cuda` fails on-device, build CTranslate2 from
 # source against the JetPack CUDA/cuDNN, or use a Jetson-specific wheel. VERIFY
 # ON D3.
-python3 -m venv "$PREFIX/venv"
-"$PREFIX/venv/bin/pip" install --upgrade pip
-"$PREFIX/venv/bin/pip" install faster-whisper zeroconf 'tomli; python_version < "3.11"' || {
+# The venv lives INSIDE the clone and is owned by earbox, so pip installs (and
+# `/opt/earbox/venv/...` via the symlink) never need root.
+sudo -u "$EARBOX_USER" python3 -m venv "$VENV"
+sudo -u "$EARBOX_USER" "$VENV/bin/pip" install --upgrade pip
+sudo -u "$EARBOX_USER" "$VENV/bin/pip" install faster-whisper zeroconf 'tomli; python_version < "3.11"' || {
   echo "[earbox] WARN: faster-whisper install needs attention on-device (CTranslate2 CUDA)."
 }
-
-echo "[earbox] install code (orin + shared common + daemon egress)"
-install -d "$PREFIX/orin" "$PREFIX/common" "$PREFIX/daemon"
-install -Dm755 "$REPO_SRC"/orin/*.py     "$PREFIX/orin/"
-install -Dm644 "$REPO_SRC"/common/*.py   "$PREFIX/common/"
-install -Dm755 "$REPO_SRC"/daemon/summarize.py "$PREFIX/daemon/summarize.py"
-install -Dm755 "$REPO_SRC"/daemon/query.py     "$PREFIX/daemon/query.py"
 
 echo "[earbox] optional whisper.cpp fallback model (whisper_cli backend)"
 install -d -o "$EARBOX_USER" -g "$EARBOX_USER" "$STORAGE_ROOT" "$MODELS_DIR"
@@ -67,7 +82,7 @@ if [ ! -f "$EARBOX_HOME/.config/earbox/orin.toml" ]; then
   sed -e "s/^mode = \"direct\"/mode = \"$MODE\"/" \
       -e "s#^memory_repo = .*#memory_repo = \"$MEMORY_REPO\"#" \
       -e "s#^model_path = .*#model_path = \"$MODELS_DIR/ggml-base.bin\"#" \
-      "$REPO_SRC/orin/config.example.toml" \
+      "$REPO_DEST/orin/config.example.toml" \
       > "$EARBOX_HOME/.config/earbox/orin.toml"
   chown "$EARBOX_USER:$EARBOX_USER" "$EARBOX_HOME/.config/earbox/orin.toml"
 fi
@@ -79,7 +94,7 @@ install -d -o "$EARBOX_USER" -g "$EARBOX_USER" /dev/shm/earbox
 
 echo "[earbox] TLS certs for the LAN hop (only needed for mode=lan)"
 if [ "$MODE" = "lan" ]; then
-  bash "$REPO_SRC/orin/gen_certs.sh" "$PREFIX/tls"
+  bash "$REPO_DEST/orin/gen_certs.sh" "$PREFIX/tls"
   chown -R "$EARBOX_USER:$EARBOX_USER" "$PREFIX/tls"
   echo "[earbox] copy $PREFIX/tls/orin.crt to each satellite as tls_cafile."
 fi
@@ -88,14 +103,17 @@ echo "[earbox] init memory repo"
 install -d -o "$EARBOX_USER" -g "$EARBOX_USER" "$MEMORY_REPO"
 sudo -u "$EARBOX_USER" git init -q "$MEMORY_REPO" || true
 
+echo "[earbox] sudo-free restart helper on PATH"
+install -Dm755 "$REPO_DEST/orin/earbox-restart" /usr/local/bin/earbox-restart
+
 echo "[earbox] systemd units"
 # Run orind from the venv python so faster-whisper is importable.
 sed -e "s#/usr/bin/python3#$PREFIX/venv/bin/python3#" \
     -e "s#/home/earbox/earbox-memory#$MEMORY_REPO#g" \
-    "$REPO_SRC/orin/systemd/orind.service" > /etc/systemd/system/orind.service
+    "$REPO_DEST/orin/systemd/orind.service" > /etc/systemd/system/orind.service
 sed "s#/home/earbox/earbox-memory#$MEMORY_REPO#g" \
-    "$REPO_SRC/orin/systemd/earbox-summary.service" > /etc/systemd/system/earbox-summary.service
-install -Dm644 "$REPO_SRC/orin/systemd/earbox-summary.timer"   /etc/systemd/system/earbox-summary.timer
+    "$REPO_DEST/orin/systemd/earbox-summary.service" > /etc/systemd/system/earbox-summary.service
+install -Dm644 "$REPO_DEST/orin/systemd/earbox-summary.timer"   /etc/systemd/system/earbox-summary.timer
 systemctl daemon-reload
 systemctl enable --now orind.service
 systemctl enable --now earbox-summary.timer
@@ -108,3 +126,5 @@ echo "Bench (D3):     time the faster-whisper small vs medium int8 RTF in real k
 echo "Storage:        $STORAGE_ROOT (SD-only sprint; set EARBOX_DATA or mount /data to relocate)"
 echo "Mute:           touch $EARBOX_HOME/.earbox-muted"
 echo "Logs:           journalctl -u orind -f"
+echo "Update (NO sudo, as $EARBOX_USER):  cd $REPO_DEST && git pull && pkill -f orin/orind.py"
+echo "                (Restart=always relaunches orind on the new code)"
