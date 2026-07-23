@@ -6,9 +6,6 @@ export default defineConfig({
       type: 'library',
       eslint: { preset: 'none' },
     },
-    'packages/kit': {
-      type: 'library',
-    },
     'apps/ui': {
       type: 'react',
       src: ['src/**/*.{ts,tsx}'],
@@ -32,6 +29,6 @@ export default defineConfig({
     ],
   },
   madge: {
-    roots: ['packages/kit/src', 'apps/ui/src'],
+    roots: ['apps/ui/src'],
   },
 });

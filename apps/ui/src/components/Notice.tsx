@@ -1,17 +1,20 @@
 import { type ReactNode } from 'react';
-import { Card, Col, Text } from '@choucroute/kit';
+import { Col } from '@stage-labs/kit/react-native/box';
+import { Text } from '@stage-labs/kit/react-native/text';
+import { Card } from '@stage-labs/kit/react-native/card';
 
 interface NoticeProps {
   title: string;
   detail: string;
+  dark: boolean;
 }
 
-export function Notice({ title, detail }: NoticeProps): ReactNode {
+export function Notice({ title, detail, dark }: NoticeProps): ReactNode {
   return (
-    <Card padding={32}>
+    <Card dark={dark} padding={32}>
       <Col gap={6} align="center">
-        <Text role="head" weight="semibold" size="2xl">{title}</Text>
-        <Text role="sub" size="sm" style={{ textAlign: 'center' }}>{detail}</Text>
+        <Text weight="semibold" size="2xl">{title}</Text>
+        <Text role="secondary" size="sm" textAlign="center">{detail}</Text>
       </Col>
     </Card>
   );

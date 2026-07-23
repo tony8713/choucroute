@@ -1,5 +1,8 @@
 import { type ReactNode } from 'react';
-import { Button, Col, Input, Row, Text } from '@choucroute/kit';
+import { Box, Col, Row } from '@stage-labs/kit/react-native/box';
+import { Text } from '@stage-labs/kit/react-native/text';
+import { Button } from '@stage-labs/kit/react-native/button';
+import { Input } from '@stage-labs/kit/react-native/input';
 import { type TranscriptFilter } from '../data/filter';
 
 interface ToolbarProps {
@@ -9,55 +12,58 @@ interface ToolbarProps {
   onReset: () => void;
 }
 
+function RoomButton({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }): ReactNode {
+  return (
+    <Button
+      size="sm"
+      color={active ? 'primary' : 'secondary'}
+      variant={active ? 'solid' : 'soft'}
+      onPress={onPress}
+      label={label}
+    />
+  );
+}
+
 export function Toolbar({ filter, rooms, onChange, onReset }: ToolbarProps): ReactNode {
   return (
     <Col gap={12}>
       <Row gap={10} wrap align="center">
-        <div style={{ flex: 1, minWidth: 220, display: 'flex' }}>
+        <Box flex={1} style={{ minWidth: 220 }}>
           <Input
-            type="search"
             value={filter.query}
-            onChange={(query) => { onChange({ ...filter, query }); }}
+            onChangeText={(query) => { onChange({ ...filter, query }); }}
             placeholder="Search transcripts"
-            style={{ flex: 1 }}
+            style={{ width: '100%' }}
           />
-        </div>
+        </Box>
         <Row gap={6} align="center">
-          <Text role="sub" size="xs">from</Text>
+          <Text role="secondary" size="xs">from</Text>
           <Input
-            type="date"
-            ariaLabel="From date"
             value={filter.from}
-            onChange={(from) => { onChange({ ...filter, from }); }}
+            onChangeText={(from) => { onChange({ ...filter, from }); }}
+            placeholder="YYYY-MM-DD"
+            style={{ width: 128 }}
           />
-          <Text role="sub" size="xs">to</Text>
+          <Text role="secondary" size="xs">to</Text>
           <Input
-            type="date"
-            ariaLabel="To date"
             value={filter.to}
-            onChange={(to) => { onChange({ ...filter, to }); }}
+            onChangeText={(to) => { onChange({ ...filter, to }); }}
+            placeholder="YYYY-MM-DD"
+            style={{ width: 128 }}
           />
         </Row>
-        <Button variant="ghost" size="sm" onClick={onReset}>Reset</Button>
+        <Button variant="ghost" color="secondary" size="sm" onPress={onReset} label="Reset" />
       </Row>
       {rooms.length > 0 ? (
         <Row gap={6} wrap align="center">
-          <Button
-            size="sm"
-            active={filter.room === null}
-            onClick={() => { onChange({ ...filter, room: null }); }}
-          >
-            All rooms
-          </Button>
+          <RoomButton label="All rooms" active={filter.room === null} onPress={() => { onChange({ ...filter, room: null }); }} />
           {rooms.map((room) => (
-            <Button
+            <RoomButton
               key={room}
-              size="sm"
+              label={room}
               active={filter.room === room}
-              onClick={() => { onChange({ ...filter, room }); }}
-            >
-              {room}
-            </Button>
+              onPress={() => { onChange({ ...filter, room }); }}
+            />
           ))}
         </Row>
       ) : null}

@@ -2,7 +2,7 @@
   "name": "@choucroute/ui",
   "version": "0.1.0",
   "private": true,
-  "description": "choucroute transcript monitor: a simple web timeline for browsing and searching the box's transcriptions.",
+  "description": "choucroute transcript monitor: a simple web timeline for browsing and searching the box's transcriptions. Built with the Stage design system (@stage-labs/kit) rendered on the web via react-native-web.",
   "license": "MIT",
   "type": "module",
   "scripts": {
@@ -12,15 +12,17 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@choucroute/kit": "workspace:*",
+    "@stage-labs/kit": "0.1.0-beta.0",
     "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "react-dom": "19.1.0",
+    "react-native-web": "^0.21.2"
   },
   "devDependencies": {
     "@choucroute/config": "workspace:*",
     "@types/react": "~19.1.0",
     "@types/react-dom": "~19.1.0",
     "@vitejs/plugin-react": "^4.3.4",
+    "react-native": "0.81.5",
     "vite": "^6.0.7"
   }
 }

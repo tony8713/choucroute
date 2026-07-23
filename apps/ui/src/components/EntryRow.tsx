@@ -1,38 +1,41 @@
 import { type ReactNode } from 'react';
-import { Badge, Row, Text, usePalette } from '@choucroute/kit';
+import { Box, Row } from '@stage-labs/kit/react-native/box';
+import { Text } from '@stage-labs/kit/react-native/text';
+import { useKitPalette } from '@stage-labs/kit/react-native/theme-context';
 import { type TranscriptEntry } from '../data/types';
 import { highlightRanges } from '../data/format';
 
-interface EntryRowProps {
-  entry: TranscriptEntry;
-  query: string;
+function RoomBadge({ room }: { room: string }): ReactNode {
+  const palette = useKitPalette();
+  return (
+    <Box background={palette.inputBg} radius={999} padding={{ x: 8, y: 2 }}>
+      <Text size="xs" role="secondary">{room}</Text>
+    </Box>
+  );
 }
 
-export function EntryRow({ entry, query }: EntryRowProps): ReactNode {
-  const p = usePalette();
+export function EntryRow({ entry, query }: { entry: TranscriptEntry; query: string }): ReactNode {
+  const palette = useKitPalette();
   const parts = highlightRanges(entry.text, query);
   return (
-    <Row gap={12} align="start" style={{ padding: '10px 0' }}>
-      <Text mono role="sub" size="sm" style={{ width: 44, flexShrink: 0, paddingTop: 1 }}>
+    <Row gap={12} align="start" style={{ paddingTop: 10, paddingBottom: 10 }}>
+      <Text variant="mono" role="secondary" size="sm" style={{ width: 44, flexShrink: 0, paddingTop: 1 }}>
         {entry.time}
       </Text>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <Text role="body" size="md" style={{ display: 'block' }}>
+      <Box flex={1} style={{ minWidth: 0 }}>
+        <Text size="md">
           {parts.map(([chunk, hit], i) =>
             hit ? (
-              <mark
-                key={i}
-                style={{ background: p.success, color: p.onPrimary, borderRadius: 4, padding: '0 2px' }}
-              >
+              <Text key={i} size="md" color={palette.bg} style={{ backgroundColor: palette.success, borderRadius: 4 }}>
                 {chunk}
-              </mark>
+              </Text>
             ) : (
-              <span key={i}>{chunk}</span>
+              <Text key={i} size="md">{chunk}</Text>
             ),
           )}
         </Text>
-      </div>
-      {entry.room !== null ? <Badge>{entry.room}</Badge> : null}
+      </Box>
+      {entry.room !== null ? <RoomBadge room={entry.room} /> : null}
     </Row>
   );
 }

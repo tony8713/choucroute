@@ -2,8 +2,11 @@
 
 A simple web timeline for monitoring every transcription the box produces:
 a reverse-chronological feed grouped by day, with full-text search, a date range,
-and per-room filters. Styled with `@choucroute/kit` so it matches the Stage /
-Snapshot design language.
+and per-room filters. Built with the real `@stage-labs/kit` (the Stage design
+system's React Native component family) rendered on the web via
+`react-native-web`, so it matches the Stage / Snapshot design language. The
+feed shows sample data by default; a remote source is opt-in via
+`VITE_TRANSCRIPTS_URL`.
 
 ```
 bun install
