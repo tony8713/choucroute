@@ -10,6 +10,10 @@ export default defineConfig({
       type: 'react',
       src: ['src/**/*.{ts,tsx}'],
     },
+    'apps/ingest': {
+      type: 'worker',
+      src: ['src/**/*.ts'],
+    },
   },
   eslint: {
     ignores: [
@@ -29,6 +33,6 @@ export default defineConfig({
     ],
   },
   madge: {
-    roots: ['apps/ui/src'],
+    roots: ['apps/ui/src', 'apps/ingest/src'],
   },
 });
