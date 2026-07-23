@@ -17,6 +17,17 @@ scratch/
 __pycache__/
 *.pyc
 
+# js monorepo
+node_modules
+dist
+.turbo
+.vite
+*.tgz
+*.log
+.env
+.env.*
+!.env.example
+
 # on-device earbox-owned venv (lives inside the clone) + generated LAN TLS certs
 /venv/
 /tls/
