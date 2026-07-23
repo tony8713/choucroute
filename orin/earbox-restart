@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Sudo-free restart of the live orind daemon: kill it and let systemd's
+# Restart=always relaunch it on the current code. Run as the earbox user
+# after `git pull` in ~/earbox. No root, no `systemctl restart`.
+set -euo pipefail
+pkill -f 'orin/orind.py' && echo "[earbox] orind killed; Restart=always will relaunch on new code." \
+  || echo "[earbox] orind not running; systemd will (re)start it."

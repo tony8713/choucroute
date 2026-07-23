@@ -64,6 +64,41 @@ sudo EARBOX_MODE=direct bash orin/provision.sh   # UNTESTED-ON-TARGET (no Orin i
 Then `arecord -l` to find the reSpeaker card and set `usb_capture_device` /
 `usb_asr_channel` in `~/.config/earbox/orin.toml`.
 
+Provision installs the live tree as the **earbox user's own git clone** at
+`~earbox/earbox` (with an earbox-owned venv at `~earbox/earbox/venv`) and points
+`/opt/earbox` at it via a symlink, so the systemd unit paths still resolve but
+the code + venv are user-owned and git-updatable.
+
+### Update the box (no sudo)
+
+Code updates need **no root**. As the `earbox` user on the Orin:
+```bash
+cd ~/earbox && git pull && earbox-restart
+```
+`earbox-restart` just kills the daemon (`pkill -f orin/orind.py`); the unit has
+`Restart=always`, so systemd relaunches `orind` on the new code in ~3s. No
+`sudo rsync` to `/opt`, no `systemctl restart`. (New pip deps: same, just
+`~/earbox/venv/bin/pip install ...` as the earbox user.)
+
+### One-time migration (root, only if the box was provisioned the OLD way)
+
+A box already running from a root-owned `/opt/earbox` copy is switched to the
+user-repo layout once, with root, then never again:
+```bash
+sudo systemctl stop orind
+sudo mv /opt/earbox /opt/earbox.bak                                   # keep the old copy as backup
+sudo -u earbox git clone https://github.com/tony8713/choucroute.git /home/earbox/earbox  # if not already present
+sudo -u earbox python3 -m venv /home/earbox/earbox/venv               # earbox-owned venv inside the clone
+sudo -u earbox /home/earbox/earbox/venv/bin/pip install --upgrade pip
+sudo -u earbox /home/earbox/earbox/venv/bin/pip install faster-whisper zeroconf
+sudo ln -sfn /home/earbox/earbox /opt/earbox                          # unit's /opt/earbox/{orin,venv} now resolve into the clone
+sudo install -Dm755 /home/earbox/earbox/orin/earbox-restart /usr/local/bin/earbox-restart
+sudo systemctl start orind
+```
+The unit is untouched: `/opt/earbox/orin/orind.py` and
+`/opt/earbox/venv/bin/python3` resolve through the symlink into the earbox-owned
+clone. After this, every future update is the sudo-free `git pull` above.
+
 **Optional Pi 4 satellite, Pi OS Lite (64-bit):**
 ```bash
 sudo bash orin/provision.sh with EARBOX_MODE=lan on the Orin   # enables the TLS server + certs

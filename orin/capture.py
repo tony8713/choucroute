@@ -24,6 +24,7 @@ here); the channel selection MUST be confirmed against the reSpeaker XVF3800
 docs + `arecord` on the real device on D3.
 """
 
+import os
 import subprocess
 
 
@@ -50,13 +51,24 @@ def capture_segment(cfg, out_wav_path):
          "-r", str(rate), "-c", str(channels), "-d", str(seconds), raw],
         check=True,
     )
-    subprocess.run(
-        ["ffmpeg", "-y", "-loglevel", "error", "-i", raw,
-         "-filter_complex", f"pan=mono|c0=c{asr_ch}",
+    # arecord can exit 0 with a header-only (44-byte) file when the USB array is
+    # momentarily contended (a desktop PulseAudio/PipeWire session re-grabbing the
+    # card); ffmpeg would then die with a cryptic "No such file or directory".
+    if not os.path.exists(raw) or os.path.getsize(raw) <= 44:
+        have = os.path.getsize(raw) if os.path.exists(raw) else "missing"
+        raise RuntimeError(f"arecord produced no audio at {raw} (size={have}); "
+                           "USB array likely contended")
+    # single-in/single-out downmix -> simple filter (-af), not -filter_complex;
+    # surface ffmpeg stderr instead of swallowing it in a bare non-zero exit.
+    proc = subprocess.run(
+        ["ffmpeg", "-nostdin", "-y", "-loglevel", "error", "-i", raw,
+         "-af", f"pan=mono|c0=c{asr_ch}",
          "-ar", str(rate), "-ac", "1", "-c:a", "pcm_s16le", str(out_wav_path)],
-        check=True,
+        stderr=subprocess.PIPE, text=True,
     )
-    import os
+    if proc.returncode != 0:
+        raise RuntimeError(f"ffmpeg downmix failed (exit {proc.returncode}) on "
+                           f"{raw}: {proc.stderr.strip()}")
     try:
         os.remove(raw)
     except FileNotFoundError:

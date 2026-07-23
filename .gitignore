@@ -28,6 +28,10 @@ dist
 .env.*
 !.env.example
 
+# on-device earbox-owned venv (lives inside the clone) + generated LAN TLS certs
+/venv/
+/tls/
+
 # hardware CAD toolchain clone + venv (not source)
 tools/
 

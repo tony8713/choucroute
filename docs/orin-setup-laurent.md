@@ -314,6 +314,22 @@ suite.
 
 ---
 
+## Mettre à jour la box (sans sudo)
+
+Une fois installée, la box tourne depuis le clone git de l'utilisateur `earbox`
+(`~/earbox`), pas depuis une copie root. Donc les mises à jour de code ne
+demandent AUCUN mot de passe root. Dans le Terminal, en tant qu'`earbox`:
+
+```
+cd ~/earbox && git pull && earbox-restart
+```
+
+`earbox-restart` arrête juste le service; il redémarre tout seul sur le nouveau
+code en quelques secondes (le service a `Restart=always`). Pas de `sudo`, pas de
+`systemctl restart`. (C'est surtout moi, Tony, qui ferai ça à distance.)
+
+---
+
 ## C'est fini
 
 Une fois l'étape 5 confirmée (je réussis à me connecter) et l'étape 6 envoyée
