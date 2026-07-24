@@ -69,20 +69,29 @@ def handle_segment(cfg, repo, transcribe, wav_path, when=None, source=None):
 
 # ---- direct mode (local USB XVF3800) ---------------------------------------
 
-def run_direct(cfg, repo, transcribe):
-    from capture import capture_segment, capture_segment_ffmpeg_mac
+def run_direct(cfg, repo, transcribe, stop_event=None):
+    from capture import (capture_segment, capture_segment_ffmpeg_mac,
+                         CaptureAborted)
     grab = capture_segment_ffmpeg_mac if cfg.get("_mac_direct") else capture_segment
     scratch = Path(cfg["scratch_dir"]); scratch.mkdir(parents=True, exist_ok=True)
     src = cfg.get("source_label", "orin")
     core.log("orind", f"direct capture: device={cfg['usb_capture_device']} "
                       f"stt={cfg['stt_backend']} memory={cfg['memory_repo']}")
     seg = 0
-    while True:
+    while stop_event is None or not stop_event.is_set():
         if core.is_muted(cfg):
+            # release the ALSA device entirely while muted; poll the flag so we
+            # reopen within ~1s of it clearing. No capture child is alive here,
+            # so a foreign arecord can grab the mic.
             core.sleep(1); continue
         wav = scratch / f"orin_{seg:06d}.wav"
         try:
-            grab(cfg, wav)
+            # mute set mid-segment tears the capture down and frees the device
+            # immediately rather than pinning it for the rest of the segment.
+            grab(cfg, wav, should_abort=lambda: core.is_muted(cfg))
+        except CaptureAborted:
+            core.log("orind", "mute engaged mid-segment: capture aborted, device released")
+            continue
         except Exception as e:  # noqa: BLE001
             core.log("orind", f"capture failed: {e}"); core.sleep(2); continue
         text = handle_segment(cfg, repo, transcribe, wav, source=src)
