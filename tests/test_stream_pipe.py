@@ -3,9 +3,11 @@
 
 The bug: passing the arecord asyncio subprocess's rec.stdout (a StreamReader,
 no fileno()) as ffmpeg's stdin crashed on every channels>1 run. The fix wires
-them with a real os.pipe(). These tests run stub `arecord`/`ffmpeg` shell
-scripts on PATH and assert bytes actually flow end to end for both the
-single-channel (no ffmpeg) and multi-channel (through the pipe) paths.
+them with a real os.pipe(). arecord now always emits a WAV stream and ffmpeg
+always runs (it reads the true format/rate/channel layout from the WAV header
+and downmixes to S16LE/16k/mono), so BOTH the mono and multi-channel paths go
+through the pipe. These tests run stub `arecord`/`ffmpeg` shell scripts on PATH
+and assert bytes actually flow end to end through the os.pipe.
 
 No ALSA, no websockets, no ffmpeg binary required.
 """
@@ -63,20 +65,21 @@ class StreamPipeTest(unittest.TestCase):
     def _drain(self, channels):
         async def go():
             rec, conv, out = await stream.open_capture(
-                device="stub", channels=channels, asr_channel=0, chunk_bytes=4096,
+                device="stub", channels=channels, asr_channel=0,
+                in_format="S16_LE", in_rate=16000,
             )
             data = await out.read()  # read to EOF
             await stream.stop_procs(conv, rec)
             return data, rec, conv
         return asyncio.run(go())
 
-    def test_single_channel_no_ffmpeg(self):
+    def test_single_channel_through_os_pipe(self):
         data, rec, conv = self._drain(channels=1)
-        self.assertIsNone(conv, "single channel must not spawn ffmpeg")
+        self.assertIsNotNone(conv, "mono path must still go through the ffmpeg downmix")
         self.assertEqual(data, PAYLOAD)
 
     def test_multi_channel_through_os_pipe(self):
-        data, rec, conv = self._drain(channels=2)
+        data, rec, conv = self._drain(channels=3)
         self.assertIsNotNone(conv, "multi channel must spawn the ffmpeg downmix")
         # bytes came out of ffmpeg's stdout => they flowed arecord -> os.pipe ->
         # ffmpeg -> us. This is exactly the path that used to crash on fileno().
