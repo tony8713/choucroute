@@ -28,7 +28,54 @@ import os
 import subprocess
 
 
-def capture_segment(cfg, out_wav_path):
+class CaptureAborted(Exception):
+    """Raised when a capture is interrupted before completing (e.g. the mute flag
+    was set mid-segment). Signals the caller to discard the partial segment; the
+    ALSA device has already been released by the time this propagates."""
+
+
+def _arecord_bin(cfg):
+    # overridable so tests can substitute a stub recorder without ALSA hardware.
+    return cfg.get("_arecord_bin", "arecord")
+
+
+def _run_arecord(cfg, args, should_abort, poll_s=0.2):
+    """Run arecord as a killable child. While it records it holds the ALSA
+    capture device exclusively, so we poll should_abort() and, the moment it
+    returns True, terminate the child and raise CaptureAborted -> the device is
+    freed within ~poll_s instead of being pinned for the whole segment."""
+    proc = subprocess.Popen([_arecord_bin(cfg), *args])
+    try:
+        while True:
+            try:
+                rc = proc.wait(timeout=poll_s)
+            except subprocess.TimeoutExpired:
+                rc = None
+            if rc is not None:
+                if rc != 0:
+                    raise subprocess.CalledProcessError(rc, [_arecord_bin(cfg), *args])
+                return
+            if should_abort is not None and should_abort():
+                raise CaptureAborted()
+    finally:
+        if proc.poll() is None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait()
+
+
+def _discard(*paths):
+    for p in paths:
+        try:
+            os.remove(p)
+        except FileNotFoundError:
+            pass
+
+
+def capture_segment(cfg, out_wav_path, should_abort=None):
     device = cfg.get("usb_capture_device", "default")
     rate = cfg["sample_rate"]
     seconds = cfg["segment_seconds"]
@@ -37,20 +84,30 @@ def capture_segment(cfg, out_wav_path):
 
     if channels <= 1:
         # already a single processed mono channel -> record straight to 16k mono
-        subprocess.run(
-            ["arecord", "-q", "-D", device, "-f", "S16_LE",
-             "-r", str(rate), "-c", "1", "-d", str(seconds), str(out_wav_path)],
-            check=True,
-        )
+        try:
+            _run_arecord(
+                cfg,
+                ["-q", "-D", device, "-f", "S16_LE",
+                 "-r", str(rate), "-c", "1", "-d", str(seconds), str(out_wav_path)],
+                should_abort,
+            )
+        except CaptureAborted:
+            _discard(out_wav_path)
+            raise
         return out_wav_path
 
     # multi-channel device: capture all channels, then pan-select the ASR one.
     raw = str(out_wav_path) + ".multi.wav"
-    subprocess.run(
-        ["arecord", "-q", "-D", device, "-f", "S16_LE",
-         "-r", str(rate), "-c", str(channels), "-d", str(seconds), raw],
-        check=True,
-    )
+    try:
+        _run_arecord(
+            cfg,
+            ["-q", "-D", device, "-f", "S16_LE",
+             "-r", str(rate), "-c", str(channels), "-d", str(seconds), raw],
+            should_abort,
+        )
+    except CaptureAborted:
+        _discard(raw, out_wav_path)
+        raise
     # arecord can exit 0 with a header-only (44-byte) file when the USB array is
     # momentarily contended (a desktop PulseAudio/PipeWire session re-grabbing the
     # card); ffmpeg would then die with a cryptic "No such file or directory".
@@ -76,9 +133,10 @@ def capture_segment(cfg, out_wav_path):
     return out_wav_path
 
 
-def capture_segment_ffmpeg_mac(cfg, out_wav_path):
+def capture_segment_ffmpeg_mac(cfg, out_wav_path, should_abort=None):
     """Mac dev convenience: capture the default avfoundation input. Not used on
-    the Orin; here so `orind.py --source direct` can be smoke-tested on a Mac."""
+    the Orin; here so `orind.py --source direct` can be smoke-tested on a Mac.
+    Accepts should_abort for call-site parity with capture_segment (ignored)."""
     subprocess.run(
         ["ffmpeg", "-y", "-loglevel", "error", "-f", "avfoundation",
          "-i", cfg.get("av_device", ":0"), "-t", str(cfg["segment_seconds"]),
