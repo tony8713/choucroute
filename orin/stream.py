@@ -66,15 +66,28 @@ def build_capture_cmd(device, channels, asr_channel, chunk_bytes):
 
 async def open_capture(device, channels, asr_channel, chunk_bytes):
     arecord, ffmpeg = build_capture_cmd(device, channels, asr_channel, chunk_bytes)
-    rec = await asyncio.create_subprocess_exec(
-        *arecord, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL,
-    )
     if ffmpeg is None:
+        rec = await asyncio.create_subprocess_exec(
+            *arecord, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL,
+        )
         return rec, None, rec.stdout
-    conv = await asyncio.create_subprocess_exec(
-        *ffmpeg, stdin=rec.stdout, stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.DEVNULL,
-    )
+    # arecord -> ffmpeg must be wired with a REAL OS pipe: the asyncio StreamReader
+    # from rec.stdout has no fileno(), so handing it to ffmpeg as stdin crashes
+    # ("StreamReader has no attribute fileno") on every channels>1 run. Give
+    # arecord the write end and ffmpeg the read end as inherited fds, then close
+    # both ends in the parent so ffmpeg sees EOF when arecord exits.
+    r_fd, w_fd = os.pipe()
+    try:
+        rec = await asyncio.create_subprocess_exec(
+            *arecord, stdout=w_fd, stderr=asyncio.subprocess.DEVNULL,
+        )
+        conv = await asyncio.create_subprocess_exec(
+            *ffmpeg, stdin=r_fd, stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+    finally:
+        os.close(r_fd)
+        os.close(w_fd)
     return rec, conv, conv.stdout
 
 
